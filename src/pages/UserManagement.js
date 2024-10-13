@@ -8,7 +8,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     // Replace the URL with your backend API URL
-    axios.get('http://localhost:3000/api/users')
+    axios.get('http://localhost:3004/api/users')
       .then(response => {
         setUsers(response.data);
       })

@@ -9,7 +9,7 @@ const Houses = () => {
 
   // Fetch houses from backend
   useEffect(() => {
-    axios.get('http://localhost:3000/api/houses')
+    axios.get('http://localhost:3004/api/houses')
       .then(response => {
         setHouses(response.data); // Set the fetched houses data
       })
