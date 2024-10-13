@@ -12,7 +12,7 @@ const Partners = () => {
   // Fetch partners from the backend
   const fetchPartners = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/partners');
+      const response = await axios.get('http://localhost:3004/api/partners');
       setPartners(response.data);
     } catch (error) {
       console.error('Error fetching partners:', error);

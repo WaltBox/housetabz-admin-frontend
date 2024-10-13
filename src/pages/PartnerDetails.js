@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Box, Typography, Card, CardContent, List, ListItem, Alert } from '@mui/material';
+import { 
+  Box, Typography, Card, CardContent, Grid, 
+  Alert, TextField, Button 
+} from '@mui/material';
 
 const PartnerDetails = () => {
-  const { id } = useParams();
-  const [partnerPlans, setPartnerPlans] = useState([]); // State to hold service plans
-  const [partner, setPartner] = useState({}); // State to hold partner details
-  const [error, setError] = useState(null); // Error handling
+  const { id } = useParams(); // To get the partner ID from URL params
+  const [partner, setPartner] = useState({});
+  const [offerSnapshots, setOfferSnapshots] = useState([]);
+  const [filteredOffers, setFilteredOffers] = useState([]);
+  const [zipCode, setZipCode] = useState('');
+  const [error, setError] = useState(null);
 
+  // Fetch partner details and offer snapshots on component load
   useEffect(() => {
     const fetchPartner = async () => {
       try {
         console.log(`Fetching partner details for ID: ${id}`);
-        const response = await axios.get(`http://localhost:3000/api/partners/${id}`);
+        const response = await axios.get(`http://localhost:3004/api/partners/${id}`);
         setPartner(response.data);
       } catch (err) {
         console.error('Error fetching partner details:', err);
@@ -21,73 +27,102 @@ const PartnerDetails = () => {
       }
     };
 
-    const fetchPartnerPlans = async () => {
+    const fetchOfferSnapshots = async () => {
       try {
-        console.log(`Fetching service plans for partner ID: ${id}`);
-        const plansResponse = await axios.get(`http://localhost:3000/api/partners/${id}/service-plans`);
-        setPartnerPlans(plansResponse.data);
+        console.log('Fetching offer snapshots...');
+        const response = await axios.get('http://localhost:3000/api/v2/offer-snapshots');
+        setOfferSnapshots(response.data);
+        setFilteredOffers(response.data); // Display all offers initially
       } catch (err) {
-        console.error('Error fetching service plans:', err);
-        setError('Error fetching service plans.');
+        console.error('Error fetching offer snapshots:', err);
+        setError('Error fetching offer snapshots.');
       }
     };
 
     fetchPartner();
-    fetchPartnerPlans();
+    fetchOfferSnapshots();
   }, [id]);
+
+  // Handle searching offers by zip code
+  const handleZipCodeSearch = () => {
+    if (!zipCode) {
+      setFilteredOffers(offerSnapshots); // Show all offers if Zip Code is cleared
+    } else {
+      const offersByZip = offerSnapshots.filter(offer =>
+        offer.zip_codes.includes(zipCode)
+      );
+      setFilteredOffers(offersByZip);
+    }
+  };
 
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (!partner || !partnerPlans) {
-    return <Typography>Loading partner details...</Typography>;
-  }
-
   return (
     <Box sx={{ p: 3 }}>
-      {/* Partner Basic Information */}
+      {/* Partner Information */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h4">{partner.name || 'Partner Name'}</Typography>
-          <Typography variant="body1"><strong>Description:</strong> {partner.description || 'No description available.'}</Typography>
-          <Typography variant="body1"><strong>Number of Houses Using Service:</strong> {partner.housesUsingService || 0}</Typography>
+          <Typography variant="body1">
+            <strong>Description:</strong> {partner.description || 'No description available.'}
+          </Typography>
+          <Typography variant="body1">
+            <strong>Number of Houses Using Service:</strong> {partner.housesUsingService || 0}
+          </Typography>
         </CardContent>
       </Card>
 
-      {/* Service Plans */}
-      <Typography variant="h5" sx={{ mb: 2 }}>Service Plans</Typography>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <List>
-            {partnerPlans.length > 0 ? (
-              partnerPlans.map((plan, index) => (
-                <ListItem key={index}>
-                  {plan.name} - {plan.price}
-                </ListItem>
+      {/* Offer Snapshots Section */}
+      {partner.name === 'Rhythm' && (
+        <>
+          <Typography variant="h5" sx={{ mb: 2 }}>Offer Snapshots</Typography>
+
+          {/* Zip Code Input and Search Button */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <TextField
+              label="Enter Zip Code"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+            />
+            <Button variant="contained" onClick={handleZipCodeSearch}>
+              Search Offers
+            </Button>
+          </Box>
+
+          {/* Offers Display */}
+          <Grid container spacing={3}>
+            {filteredOffers.length > 0 ? (
+              filteredOffers.map((offer) => (
+                <Grid item xs={12} sm={6} md={4} key={offer.uuid}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6">{offer.title}</Typography>
+                      <Typography variant="body2">
+                        <strong>Term Months:</strong> {offer.term_months}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>kWh Rate:</strong> {offer.rhythm_kwh_rate}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Price for 1000 kWh:</strong> ${offer.price_1000_kwh}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Renewable Energy:</strong> {offer.renewable_energy ? 'Yes' : 'No'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {offer.description_en}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
               ))
             ) : (
-              <Typography>No service plans available.</Typography>
+              <Typography>No offers available for this Zip Code.</Typography>
             )}
-          </List>
-        </CardContent>
-      </Card>
-
-      {/* Payment Information */}
-      {partner.paymentDetails ? (
-        <>
-          <Typography variant="h5" sx={{ mb: 2 }}>Payment Information</Typography>
-          <Card>
-            <CardContent>
-              <Typography variant="body1"><strong>Last Payment Date:</strong> {partner.paymentDetails.lastPaymentDate || 'N/A'}</Typography>
-              <Typography variant="body1"><strong>Amount Paid:</strong> {partner.paymentDetails.amountPaid || 'N/A'}</Typography>
-              <Typography variant="body1"><strong>Bank Name:</strong> {partner.paymentDetails.bankName || 'N/A'}</Typography>
-              <Typography variant="body1"><strong>Account Number:</strong> {partner.paymentDetails.accountNumber || '**** **** **** 1234'}</Typography>
-            </CardContent>
-          </Card>
+          </Grid>
         </>
-      ) : (
-        <Alert severity="info">No payment information available.</Alert>
       )}
     </Box>
   );
